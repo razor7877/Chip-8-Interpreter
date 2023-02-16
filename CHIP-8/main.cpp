@@ -12,7 +12,7 @@
 
 #include "SDL.h"
 
-unsigned char font[] = {
+uint8_t font[] = {
 	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 	0x20, 0x60, 0x20, 0x20, 0x70, // 1
 	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -31,21 +31,21 @@ unsigned char font[] = {
 	0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
-unsigned char memory[4096]{};
+uint8_t memory[4096]{};
 
-unsigned char V[16]{}; // Registers
-unsigned short I{}; // Index pointer
-unsigned short pc = 0x200; // Program counter
-unsigned short stack[16]{};
-unsigned char sp{}; // Stack pointer
-unsigned short opcode{};
+uint8_t V[16]{}; // Registers
+uint16_t I{}; // Index pointer
+uint16_t pc = 0x200; // Program counter
+uint16_t stack[16]{};
+uint8_t sp{}; // Stack pointer
+uint16_t opcode{};
 
-unsigned char display[64 * 32]{};
+uint8_t display[64 * 32]{};
 
-unsigned char delay_timer{};
-unsigned char sound_timer{};
+uint8_t delay_timer{};
+uint8_t sound_timer{};
 
-unsigned char keypad[16]{}; // Keypad
+uint8_t keypad[16]{}; // Keypad
 
 bool drawFlag = false;
 
@@ -87,6 +87,25 @@ int start_sdl()
 		printf("[FAIL] %s\n", SDL_GetError());
 		return -1;
 	}
+
+	return 0;
+}
+
+int load_rom()
+{
+	FILE* rom = fopen("roms/demos/Trip8 Demo (2008) [Revival Studios].ch8", "rb");
+	if (!rom)
+	{
+		std::cout << "ERROR OPENING ROM FILE";
+		return -1;
+	}
+
+	fseek(rom, 0, SEEK_END); // Get file size
+	size_t size = ftell(rom);
+
+	rewind(rom);
+	// ROM is loaded into memory at 0x200
+	fread(&memory[0x200], sizeof(char), size, rom);
 
 	return 0;
 }
@@ -267,29 +286,9 @@ void process_input()
 	}
 }
 
-int main(int argc, char* argv[]) {
-	if (start_sdl() != 0)
-		return -1;
-
-	// Write font in memory from 050-09F
-	memcpy(&memory[0x50], font, sizeof(font));
-
-	FILE* rom = fopen("roms/demos/Trip8 Demo (2008) [Revival Studios].ch8", "rb");
-	if (!rom)
-	{
-		std::cout << "ERROR OPENING ROM FILE";
-		return -1;
-	}
-
-	fseek(rom, 0, SEEK_END); // Get file size
-	size_t size = ftell(rom);
-
-	rewind(rom);
-	// ROM is loaded into memory at 0x200
-	fread(&memory[0x200], sizeof(char), size, rom);
-
-	/*
-	// Dump memory to console
+// Dump memory to console
+void dump_memory()
+{
 	for (unsigned int i = 0; i < 4096; i += 8)
 	{
 		std::cout << std::hex << i << " : ";
@@ -297,7 +296,18 @@ int main(int argc, char* argv[]) {
 		std::cout << std::hex << (int)memory[i + 2] << (int)memory[i + 3] << " ";
 		std::cout << std::hex << (int)memory[i + 4] << (int)memory[i + 5] << " ";
 		std::cout << std::hex << (int)memory[i + 6] << (int)memory[i + 7] << std::endl;
-	}*/
+	}
+}
+
+int main(int argc, char* argv[]) {
+	if (start_sdl() != 0)
+		return -1;
+
+	// Write font in memory from 050-09F
+	memcpy(&memory[0x50], font, sizeof(font));
+
+	if (load_rom() != 0)
+		return -1;
 
 	// Seeds pseudo random generator
 	srand((unsigned)time(NULL));
@@ -529,10 +539,10 @@ int main(int argc, char* argv[]) {
 
 			case 0xD000: // DXYN : Draws a sprite with coordinates in registers VX and VY of 8 pixels width and N pixels height
 			{
-				unsigned short x = V[(opcode & 0x0F00) >> 8] % 64;
-				unsigned short y = V[(opcode & 0x00F0) >> 4] % 32;
-				unsigned short height = opcode & 0x000F;
-				unsigned short pixel;
+				uint16_t x = V[(opcode & 0x0F00) >> 8] % 64;
+				uint16_t y = V[(opcode & 0x00F0) >> 4] % 32;
+				uint16_t height = opcode & 0x000F;
+				uint16_t pixel;
 
 				std::cout << "Drawing at coords (x, y) ";
 				std::cout << std::hex << x;
@@ -646,6 +656,7 @@ int main(int argc, char* argv[]) {
 						memory[I + 1] = (vx / 10) % 10;
 						memory[I + 2] = (vx % 100) % 10;
 						pc += 2;
+
 						break;
 					}
 
@@ -660,7 +671,7 @@ int main(int argc, char* argv[]) {
 					case 0x0065: // FX65 : Fill registers V0-VX with values from memory, starting at I
 						for (int i = 0; i <= ((opcode & 0x0F00) >> 8); i++)
 						{
-							V[i] = memory[I + 1];
+							V[i] = memory[I + i];
 						}
 						pc += 2;
 						break;
