@@ -93,7 +93,7 @@ int start_sdl()
 
 int load_rom()
 {
-	FILE* rom = fopen("roms/demos/Trip8 Demo (2008) [Revival Studios].ch8", "rb");
+	FILE* rom = fopen("roms/games/Breakout (Brix hack) [David Winter, 1997].ch8", "rb");
 	if (!rom)
 	{
 		std::cout << "ERROR OPENING ROM FILE";
